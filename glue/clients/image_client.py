@@ -15,6 +15,8 @@ from .layer_artist import (ScatterLayerArtist, LayerArtistContainer,
 
 
 def requires_data(func):
+    """Decorator that checks an ImageClient for a non-null display_data
+    attribute. Only executes decorated function if present"""
     def result(*args, **kwargs):
         if args[0].display_data is None:
             return
@@ -226,7 +228,8 @@ class ImageClient(VizClient):
 
         self._view = view
         for a in list(self.artists):
-            if a.layer.data is not self.display_data:
+            if (not isinstance(a, ScatterLayerArtist)) and \
+              a.layer.data is not self.display_data:
                 self.artists.remove(a)
             else:
                 a.update(view)
@@ -334,7 +337,7 @@ class ImageClient(VizClient):
             raise TypeError("Data not managed by client's data collection")
 
         if not self.can_handle_data(layer.data):
-            logging.warning("Cannot visulize data: %s. Aborting", layer.data)
+            logging.warning("Cannot visulize %s. Aborting", layer.label)
             return
 
         if isinstance(layer, Data):
@@ -348,7 +351,9 @@ class ImageClient(VizClient):
             raise TypeError("Unrecognized layer type: %s" % type(layer))
 
     def add_scatter_layer(self, layer):
+        logging.getLogger(__name__).debug('Adding scatter layer for %s' % layer)
         if layer in self.artists:
+            logging.getLogger(__name__).debug('Layer already present')
             return
 
         self.artists.append(ScatterLayerArtist(layer, self._ax))
@@ -362,6 +367,12 @@ class ImageClient(VizClient):
                 continue
             a.xatt = xatt
             a.yatt = yatt
+            if self.is_3D:
+                zatt = self.display_data.get_pixel_component_id(self._slice_ori)
+                subset = (zatt > self._slice_ind) & (zatt <= self._slice_ind+1)
+                a.emphasis = subset
+            else:
+                a.emphasis = None
             a.update()
             a.redraw()
         self._redraw()

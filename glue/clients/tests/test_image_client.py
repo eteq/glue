@@ -327,6 +327,13 @@ class TestImageClient(object):
         client.set_attribute(self.im.visible_components[0])
         assert client.get_norm() == (1, 2)
 
+    def test_scatter_persistent(self):
+        """Ensure that updates to data plot don't erase scatter artists"""
+        client = self.create_client_with_image_and_scatter()
+        assert self.scatter in client.artists
+        client._update_data_plot()
+        assert self.scatter in client.artists
+
 
 def test_format_coord_2d():
     """Coordinate display is in world coordinates"""
